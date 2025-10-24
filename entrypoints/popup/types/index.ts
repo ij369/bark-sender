@@ -52,6 +52,21 @@ export interface Sound {
     old?: boolean; // 是否为旧铃声
 }
 
+// 文件存储服务提供商类型
+export type FileStorageProvider = 'aws' | 'r2' | 'custom';
+
+// 文件存储配置接口
+export interface FileStorageConfig {
+    provider: FileStorageProvider;
+    endpoint: string;
+    region: string;
+    bucket: string;
+    accessKeyId: string;
+    secretAccessKey: string;
+    customDomain?: string;
+    pathPrefix?: string;
+}
+
 // 应用设置接口
 export interface AppSettings {
     enableContextMenu: boolean;
@@ -73,6 +88,8 @@ export interface AppSettings {
     enableSystemNotifications?: boolean; // 是否启用系统通知
     keepEssentialNotifications?: boolean; // 是否保留必要通知（仅显示错误通知）
     enableFileCache?: boolean; // 是否启用文件缓存
+    enableFileStorage?: boolean; // 是否启用文件存储服务
+    fileStorageConfig?: FileStorageConfig; // 文件存储服务配置
 }
 // 平台类型
 export type PlatformType = 'mac' | 'windows' | 'linux' | 'unknown';

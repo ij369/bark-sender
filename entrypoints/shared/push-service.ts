@@ -513,6 +513,7 @@ export function getRequestParameters(params: PushParams, isEncrypted: boolean): 
         badge: params.badge?.toString(),
         call: params.call,
         icon: params.icon,
+        image: params.image,
         group: params.group,
         isArchive: params.isArchive,
         action: params.action,

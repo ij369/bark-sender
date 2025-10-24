@@ -445,6 +445,10 @@ export default function RecordDetailModal({ record, open, onClose, onExited, cur
     if (!record || !portalRoot.current || !mounted) return null;
 
     const bodyRenderer = () => {
+        // 检查是否有 image 参数
+        const imageParam = displayParameters?.image;
+        const hasImageParam = imageParam && typeof imageParam === 'string' && imageParam.trim() !== '';
+
         if (record?.inspectType === 'image' && record.url) { // inspectType 为 image 时
             return (
                 <Stack direction="row" gap={1} alignItems="center">
@@ -483,6 +487,49 @@ export default function RecordDetailModal({ record, open, onClose, onExited, cur
                     >
                         <ContentCopyIcon sx={{ fontSize: '0.875rem' }} />
                     </IconButton></Stack>
+            );
+        } else if (hasImageParam) { // 检查 image 参数
+            return (
+                <Stack direction="row" gap={1} alignItems="center">
+                    <Box sx={{
+                        width: '105px', height: '105px', border: '1px solid', borderColor: 'divider',
+                        backgroundColor: theme.palette.action.hover,
+                        borderRadius: '4px',
+                    }}>
+                        <img
+                            src={imageParam}
+                            alt="推送图片"
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain',
+                            }}
+                            onDoubleClick={() => {
+                                window.open(imageParam, '_blank');
+                            }}
+                            onError={(e) => {
+                                console.warn('图片加载失败:', imageParam);
+                                // 可以在这里添加错误处理，比如显示占位符
+                            }}
+                        />
+                    </Box>
+                    {/* 新标签页打开 */}
+                    <IconButton
+                        onClick={() => {
+                            window.open(imageParam, '_blank');
+                        }}
+                    >
+                        <OpenInNewIcon sx={{ fontSize: '0.875rem' }} />
+                    </IconButton>
+                    {/* 拷贝 */}
+                    <IconButton
+                        onClick={() => {
+                            handleCopy(imageParam);
+                        }}
+                    >
+                        <ContentCopyIcon sx={{ fontSize: '0.875rem' }} />
+                    </IconButton>
+                </Stack>
             );
         }
 

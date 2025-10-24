@@ -17,6 +17,8 @@ import {
     Tooltip,
     LinearProgress,
     Snackbar,
+    Chip,
+    Divider,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -30,14 +32,16 @@ import SecurityIcon from '@mui/icons-material/Security';
 import TuneIcon from '@mui/icons-material/Tune';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
+import CloudIcon from '@mui/icons-material/Cloud';
 
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useTranslation } from 'react-i18next';
-import { Device, ThemeMode } from '../types';
+import { Device, ThemeMode, FileStorageConfig } from '../types';
 import { useAppContext } from '../contexts/AppContext';
 import DeviceDialog from '../components/DeviceDialog';
 import EncryptionDialog from '../components/EncryptionDialog';
 import SoundDialog from '../components/SoundDialog';
+import FileStorageDialog from '../components/FileStorageDialog';
 import FeatureSettings from '../components/FeatureSettings';
 // import OtherSettings from '../components/OtherSettings';
 import OtherSettingsCard from '../components/OtherSettingsCard';
@@ -76,6 +80,7 @@ export default function Settings({
     const [editingDevice, setEditingDevice] = useState<Device | undefined>();
     const [encryptionDialogOpen, setEncryptionDialogOpen] = useState(false);
     const [soundDialogOpen, setSoundDialogOpen] = useState(false);
+    const [fileStorageDialogOpen, setFileStorageDialogOpen] = useState(false);
     // const [shortcutGuideAnchor, setShortcutGuideAnchor] = useState<HTMLElement | null>(null);
     const [toast, setToast] = useState<{ open: boolean, message: string }>({ open: false, message: '' });
     const [version, setVersion] = useState<string | null>(null);
@@ -115,6 +120,49 @@ export default function Settings({
             // 保存铃声设置失败: {{message}}
             setError(t('common.error_update', { message: error instanceof Error ? error.message : '未知错误' }));
         }
+    };
+
+    const handleFileStorageToggle = async (enabled: boolean) => {
+        try {
+            if (enabled) {
+                const config = appSettings?.fileStorageConfig;
+                const hasValidConfig = config &&
+                    config.endpoint &&
+                    config.region &&
+                    config.bucket &&
+                    config.accessKeyId &&
+                    config.secretAccessKey;
+
+                if (hasValidConfig) {
+                    // 如果已有有效配置，直接启用
+                    await updateAppSetting('enableFileStorage', true);
+                } else {
+                    // 如果没有有效配置，打开配置对话框
+                    setFileStorageDialogOpen(true);
+                }
+            } else {
+                await updateAppSetting('enableFileStorage', false);
+            }
+        } catch (error) {
+            setError(`更新文件存储设置失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
+    };
+
+    // 处理文件存储配置保存
+    const handleFileStorageConfigSave = async (config: FileStorageConfig) => {
+        try {
+            await updateAppSetting('fileStorageConfig', config);
+            await updateAppSetting('enableFileStorage', true);
+        } catch (error) {
+            setError(`保存文件存储配置失败: ${error instanceof Error ? error.message : '未知错误'}`);
+            throw error;
+        }
+    };
+
+    // 处理文件存储对话框关闭
+    const handleFileStorageDialogClose = () => {
+        // 如果用户取消配置且之前没有启用文件存储，确保开关保持关闭状态
+        setFileStorageDialogOpen(false);
     };
 
     const handleAddDevice = async (alias: string, apiURL: string, authorization?: { type: 'basic'; user: string; pwd: string; value: string; }) => {
@@ -399,6 +447,64 @@ export default function Settings({
                         </Stack>
                     </Stack>
                 </Paper>
+
+                <Paper elevation={2} sx={{ p: 3 }}>
+                    <Stack spacing={3}>
+                        <Stack direction="row" alignItems="center" gap={1}>
+                            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CloudIcon fontSize="small" />
+                                推送附件
+                            </Typography>
+                            <Chip label="beta" color="warning" variant="outlined" size="small" />
+                        </Stack>
+                        <Stack direction="column" gap={2}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        disabled={devices.length === 0}
+                                        checked={appSettings?.enableFileStorage || false}
+                                        onChange={(e) => handleFileStorageToggle(e.target.checked)}
+                                    />
+                                }
+                                label="启用文件存储服务"
+                                sx={{ userSelect: 'none' }}
+                            />
+
+                            {/* 根据配置检测是否有效 */}
+                            {appSettings?.enableFileStorage && (() => {
+                                const config = appSettings?.fileStorageConfig;
+                                const isValid = config &&
+                                    config.endpoint &&
+                                    config.region &&
+                                    config.bucket &&
+                                    config.accessKeyId &&
+                                    config.secretAccessKey;
+
+                                return (
+                                    <Alert severity={isValid ? "success" : "error"} sx={{ mt: 1 }}>
+                                        <Typography variant="body2">
+                                            {isValid ? '已配置' : '未配置'}
+                                        </Typography>
+                                    </Alert>
+                                );
+                            })()}
+
+                            {appSettings?.enableFileStorage && (
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    fullWidth
+                                    onClick={() => setFileStorageDialogOpen(true)}
+                                    startIcon={<TuneIcon />}
+                                    sx={{ alignSelf: 'flex-start' }}
+                                >
+                                    配置存储服务
+                                </Button>
+                            )}
+                        </Stack>
+                    </Stack>
+                </Paper>
+
                 {/* 功能设置卡片 */}
                 <FeatureSettings
                     devices={devices}
@@ -508,8 +614,13 @@ export default function Settings({
                                         </IconButton>
                                     </Tooltip>
                                 </ListItem>
-
-                                <ListItem sx={{ px: 0 }}>
+                                <Divider sx={{ my: 1 }} />
+                                <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
+                                    <Typography variant="body2" color="text.secondary">
+                                        测试版
+                                    </Typography>
+                                </Stack>
+                                <ListItem sx={{ px: 0, display: 'none' }}>
                                     <ListItemText
                                         primary={
                                             <Stack direction="row" alignItems="center" spacing={1}>
@@ -602,6 +713,22 @@ export default function Settings({
                 onClose={() => setSoundDialogOpen(false)}
                 onSave={handleSoundSave}
                 currentSound={appSettings?.sound || ''}
+            />
+
+            <FileStorageDialog
+                open={fileStorageDialogOpen}
+                config={appSettings?.fileStorageConfig || {
+                    provider: 'aws',
+                    endpoint: '',
+                    region: 'us-east-1',
+                    bucket: '',
+                    accessKeyId: '',
+                    secretAccessKey: '',
+                    customDomain: '',
+                    pathPrefix: ''
+                }}
+                onClose={handleFileStorageDialogClose}
+                onSave={handleFileStorageConfigSave}
             />
 
             {/* Toast提示 */}

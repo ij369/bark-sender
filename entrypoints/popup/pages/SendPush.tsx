@@ -39,6 +39,8 @@ import UrlDialogV2 from '../components/UrlDialogV2';
 import AdvancedParamsEditor from '../components/AdvancedParamsEditor';
 import { getAppSettings } from '../utils/settings';
 import { SlideUpTransition } from '../components/DialogTransitions';
+import FileUploadButton from '../components/FileUploadButton';
+import FilePreviewDialog from '../components/FilePreviewDialog';
 
 interface SendPushProps {
     devices: Device[];
@@ -72,6 +74,16 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
 
     // 自定义参数
     const [advancedParams, setAdvancedParams] = useState<Record<string, any> | undefined>(undefined);
+
+    // 文件上传相关状态
+    const [filePreviewOpen, setFilePreviewOpen] = useState(false);
+    const [uploadedFile, setUploadedFile] = useState<{
+        url: string;
+        name: string;
+        type: string;
+    } | null>(null);
+    const [fileSending, setFileSending] = useState(false);
+    const [isDragOver, setIsDragOver] = useState(false);
 
     // 从本地存储恢复消息内容
     useEffect(() => {
@@ -478,6 +490,116 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
         setAdvancedParams(params);
     };
 
+    // 处理文件上传成功
+    const handleFileUploadSuccess = (fileUrl: string, fileName: string, fileType: string) => {
+        setUploadedFile({
+            url: fileUrl,
+            name: fileName,
+            type: fileType
+        });
+        setFilePreviewOpen(true);
+    };
+
+    // 拖拽处理
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isDragOver) {
+            setIsDragOver(true);
+        }
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // 只有当拖离整个容器时才设置为 false
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+            setIsDragOver(false);
+        }
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            const fileUploadButton = document.querySelector('input[type="file"]') as HTMLInputElement;
+            if (fileUploadButton) {
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                fileUploadButton.files = dt.files;
+
+                const event = new Event('change', { bubbles: true });
+                fileUploadButton.dispatchEvent(event);
+            }
+        }
+    };
+
+    const handleFileSend = async () => {
+        if (!uploadedFile) return;
+
+        if (isApiV2 && selectedDevices.length === 0) {
+            setResult({ type: 'error', message: t('push.errors.no_device') });
+            return;
+        } else if (!isApiV2 && !selectedDevice) {
+            setResult({ type: 'error', message: t('push.errors.no_device') });
+            return;
+        }
+
+        setFileSending(true);
+        setResult(null);
+
+        try {
+            const pushUuid = generateID();
+            setLastPushUuid(pushUuid);
+
+            // 判断是否为图片类型
+            const isImage = uploadedFile.type.startsWith('image/');
+
+            // 准备推送参数
+            let finalParams = { ...advancedParams };
+            let urlParam: string | undefined = undefined;
+
+            if (isImage) {
+                // 图片类型：通过 image 参数传递
+                finalParams.image = uploadedFile.url;
+            } else {
+                // 非图片类型：通过 url 参数传递
+                urlParam = uploadedFile.url;
+            }
+
+            const response = await sendPushMessage(
+                isApiV2 ? selectedDevices[0] : selectedDevice!,
+                uploadedFile.name,
+                undefined,
+                pushUuid,
+                isImage ? '图片分享' : '文件分享',
+                urlParam,
+                finalParams,
+                isApiV2 ? selectedDevices : undefined
+            );
+
+            if (response.code === 200) {
+                setResult({ type: 'success', message: t('push.success') });
+                setFilePreviewOpen(false);
+                setUploadedFile(null);
+            } else {
+                const errorMessage = response.message || t('common.error_unknown');
+                const finalMessage = errorMessage.startsWith('utils.api.') ? t(errorMessage) : errorMessage;
+                setResult({ type: 'error', message: t('push.errors.send_failed', { message: finalMessage }) });
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : t('common.error_unknown');
+            const finalMessage = errorMessage.startsWith('utils.api.') ? t(errorMessage) : errorMessage;
+            setResult({ type: 'error', message: t('push.errors.send_failed', { message: finalMessage }) });
+        } finally {
+            setFileSending(false);
+        }
+    };
+
     // 检测是否需要自动打开添加设备对话框
     const [shouldAutoAddDevice, setShouldAutoAddDevice] = useState(false);
 
@@ -582,6 +704,9 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
                 <Paper
                     ref={paperRef}
                     elevation={2}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
                     sx={{
                         p: 3,
                         flex: 1,
@@ -589,9 +714,50 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
                         flexDirection: 'column',
                         gap: 3,
                         transformOrigin: 'center center',
+                        border: isDragOver ? '2px dashed' : '2px solid transparent',
+                        borderColor: isDragOver ? 'primary.main' : 'transparent',
+                        backgroundColor: isDragOver ? 'action.hover' : 'background.paper',
+                        transition: 'all 0.2s ease-in-out',
+                        position: 'relative',
                         // transition: 'gap 0.3s ease-in-out'
                     }}
                 >
+                    {/* 拖拽提示层 */}
+                    {isDragOver && (
+                        <Box
+                            sx={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                                zIndex: 1000,
+                                borderRadius: 1,
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    textAlign: 'center',
+                                    p: 3,
+                                    backgroundColor: 'background.paper',
+                                    borderRadius: 2,
+                                    boxShadow: 2,
+                                }}
+                            >
+                                <Typography variant="h6" color="primary" gutterBottom>
+                                    拖拽文件到这里上传
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    支持图片、文件类型
+                                </Typography>
+                            </Box>
+                        </Box>
+                    )}
+
                     <Typography variant="h6" gutterBottom>
                         {/* 发送推送消息 */}
                         {t('push.title')}
@@ -629,6 +795,16 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
                             size="small"
                             fullWidth
                             autoFocus
+                            slotProps={{
+                                input: {
+                                    endAdornment: (
+                                        <FileUploadButton
+                                            onUploadSuccess={handleFileUploadSuccess}
+                                            disabled={loading || clipboardLoading}
+                                        />
+                                    )
+                                }
+                            }}
                         />
 
                         <Collapse
@@ -915,6 +1091,22 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
                 onClose={() => setDeviceDialogOpen(false)}
                 onSubmit={handleAddDevice}
             />
+
+            {/* 文件预览Dialog */}
+            {uploadedFile && (
+                <FilePreviewDialog
+                    open={filePreviewOpen}
+                    onClose={() => {
+                        setFilePreviewOpen(false);
+                        setUploadedFile(null);
+                    }}
+                    onSend={handleFileSend}
+                    fileUrl={uploadedFile.url}
+                    fileName={uploadedFile.name}
+                    fileType={uploadedFile.type}
+                    sending={fileSending}
+                />
+            )}
         </>
     );
 } 

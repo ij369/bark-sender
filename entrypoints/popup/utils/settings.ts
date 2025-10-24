@@ -46,6 +46,17 @@ export const DEFAULT_SETTINGS: AppSettings = {
     enableSystemNotifications: true, // 启用系统通知，默认true
     keepEssentialNotifications: true, // 保有必要通知，默认true
     enableFileCache: true, // 文件缓存，默认开启
+    enableFileStorage: false, // 启用文件存储服务，默认关闭
+    fileStorageConfig: {
+        provider: 'aws',
+        endpoint: '',
+        region: 'us-east-1',
+        bucket: '',
+        accessKeyId: '',
+        secretAccessKey: '',
+        customDomain: '',
+        pathPrefix: ''
+    }, // 文件存储服务配置
 };
 
 // 获取浏览器存储API
