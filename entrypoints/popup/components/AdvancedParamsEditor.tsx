@@ -31,7 +31,7 @@ interface ParamConfig {
     key: string;
     value: string;
     description: string;
-    type: 'text' | 'select' | 'slider'; // text 为输入框, select 为下拉框, slider 为滑块
+    type: 'text' | 'select' | 'slider' | 'number'; // text 为输入框, select 为下拉框, slider 为滑块, number 为正整数
     options?: Array<{ value: string; label: string }>;
     min?: number;
     max?: number;
@@ -120,6 +120,14 @@ const AdvancedParamsEditor: React.FC<AdvancedParamsEditorProps> = ({ onChange, p
                 { "value": "", "label": "not_set" },
                 { "value": "none", "label": "none" }
             ]
+        },
+        {
+            "key": "ttl",
+            "value": "",
+            "description": "代表保存推送的有效期，单位为秒。仅对保存到历史记录的消息生效，到期后会自动删除；如果通知中心里仍有对应通知，也会一并删除。",
+            "type": "number",
+            "min": 1,
+            "step": 1
         }
     ];
 
@@ -185,6 +193,12 @@ const AdvancedParamsEditor: React.FC<AdvancedParamsEditorProps> = ({ onChange, p
 
     // 处理参数变化
     const handleParamChange = (key: string, value: string) => {
+        const config = paramConfigs.find(item => item.key === key);
+        // ttl 仅允许空值或大于 0 的正整数
+        if (config?.type === 'number' && value !== '' && !/^[1-9]\d*$/.test(value)) {
+            return;
+        }
+
         // 查找对应的默认值
         const defaultValue = paramConfigs.find(config => config.key === key)?.value || '';
 
@@ -470,6 +484,33 @@ const AdvancedParamsEditor: React.FC<AdvancedParamsEditorProps> = ({ onChange, p
                                 ))}
                             </Select>
                         </FormControl>
+                        <Typography variant="caption" color="text.secondary" fontSize={'0.625rem'}>
+                            {t(`push.advanced_params.p_${config.key}`)}
+                        </Typography>
+                    </Stack>
+                );
+            case 'number':
+                return (
+                    <Stack
+                        key={config.key}
+                        spacing={0.5}
+                        sx={{ mb: 1 }}
+                        ref={(el) => { paramRefs.current[config.key] = el; return undefined; }}
+                        id={`param-${config.key}`}>
+                        <TextField
+                            label={config.key}
+                            value={params[config.key] || ''}
+                            onChange={(e) => handleParamChange(config.key, e.target.value)}
+                            onBlur={handleBlur}
+                            size="small"
+                            variant="standard"
+                            type="number"
+                            inputProps={{
+                                min: config.min ?? 1,
+                                step: config.step ?? 1
+                            }}
+                            sx={{ minHeight: 32 }}
+                        />
                         <Typography variant="caption" color="text.secondary" fontSize={'0.625rem'}>
                             {t(`push.advanced_params.p_${config.key}`)}
                         </Typography>

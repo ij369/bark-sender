@@ -47,8 +47,8 @@ echo ""
 
 # 检查 Node.js 版本
 if ! command -v node &> /dev/null; then
-    echo "❌ 错误: 未找到 Node.js，请先安装 Node.js 18.0.0 或更高版本"
-    echo "❌ Error: Node.js not found. Please install Node.js 18.0.0 or higher"
+    echo "❌ 错误: 未找到 Node.js，请先安装 Node.js 22.0.0 或更高版本"
+    echo "❌ Error: Node.js not found. Please install Node.js 22.0.0 or higher"
     
     if [[ "$OSTYPE" == "darwin"* ]]; then
         echo "💡 macOS 安装建议:"
@@ -67,9 +67,9 @@ echo "✅ Node.js 版本: v$NODE_VERSION"
 
 # 检查 Node.js 版本是否满足要求
 NODE_MAJOR_VERSION=$(echo $NODE_VERSION | cut -d'.' -f1)
-if [ "$NODE_MAJOR_VERSION" -lt 18 ]; then
-    echo "❌ 错误: Node.js 版本过低，需要 18.0.0 或更高版本"
-    echo "❌ Error: Node.js version too low, requires 18.0.0 or higher"
+if [ "$NODE_MAJOR_VERSION" -lt 22 ]; then
+    echo "❌ 错误: Node.js 版本过低，需要 22.0.0 或更高版本"
+    echo "❌ Error: Node.js version too low, requires 22.0.0 or higher"
     exit 1
 fi
 

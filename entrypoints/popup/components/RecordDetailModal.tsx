@@ -33,6 +33,7 @@ import {
     OpenInNew as OpenInNewIcon,
     ChevronLeft as ChevronLeftIcon,
     ChevronRight as ChevronRightIcon,
+    AutoDelete as AutoDeleteIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { HistoryRecord, getHistoryRecordByUuid, updateHistoryRecordStatus } from '../utils/database';
@@ -983,9 +984,19 @@ export default function RecordDetailModal({ record, open, onClose, onExited, cur
                                                 icon={<ScheduleIcon fontSize="small" />}
                                                 label={t('history.detail.time')}
                                                 value={record.createdAt}
-                                                tooltip={parameters.timezone}
+                                                // tooltip={parameters.timezone}
                                                 onCopy={handleCopy}
                                             />
+                                            {/* 过期时间 */}
+                                            {displayParameters?.ttl && (
+                                                <DetailRow
+                                                    icon={<AutoDeleteIcon fontSize="small" />}
+                                                    label={t('history.detail.ttl')}
+                                                    value={displayParameters?.ttl ? dayjs(record.createdAt).add(displayParameters?.ttl, 'seconds').format('YYYY-MM-DD HH:mm:ss') : ''}
+                                                    tooltip={t('history.detail.ttl_tooltip')}
+                                                    onCopy={handleCopy}
+                                                />
+                                            )}
                                         </Stack>
 
                                         <Divider >

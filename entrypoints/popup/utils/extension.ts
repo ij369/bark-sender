@@ -1,5 +1,22 @@
 import { detectBrowser } from './platform';
+import i18n from '../i18n';
 
+function getAppStoreUrl(type: 'bark' | 'barkSender') {
+    // 修复 App Store 链接问题
+    const isZh = i18n.language.startsWith('zh');
+    const hasZh = navigator.languages.some(lang =>
+        lang.toLowerCase().startsWith('zh')
+    );
+    const barkASUrl = `https://apps.apple.com${(isZh || hasZh) ? '/cn' : ''}/app/id1403753865`;
+    const barkSenderMASUrl = `https://apps.apple.com${(isZh || hasZh) ? '/cn' : ''}/app/id6755458686`;
+    switch (type) {
+        case 'bark':
+            return barkASUrl;
+        case 'barkSender':
+        default:
+            return barkSenderMASUrl;
+    }
+}
 // 打开GitHub页面
 export function openGitHub() {
     const url = 'https://github.com/ij369/bark-sender';
@@ -20,6 +37,9 @@ export function openStoreRating() {
             break;
         case 'edge':
             url = `https://microsoftedge.microsoft.com/addons/detail/bark-sender/${browser.runtime.id}`;
+            break;
+        case 'safari':
+            url = getAppStoreUrl('barkSender');
             break;
         default:
             url = `https://github.com/ij369/bark-sender`;
@@ -45,8 +65,7 @@ export function openOfficialWebsite() {
 }
 
 export function openBarkApp() {
-    const url = 'https://apps.apple.com/app/bark-custom-notifications/id1403753865';
-    window.open(url, '_blank');
+    window.open(getAppStoreUrl('bark'), '_blank');
 }
 
 export function openBarkWebsite() {

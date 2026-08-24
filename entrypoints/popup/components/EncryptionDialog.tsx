@@ -198,35 +198,38 @@ export default function EncryptionDialog({ open, config, onClose, onSave }: Encr
                         />
                     </FormControl>
 
-                    <FormControl variant="standard">
-                        {/* IV */}
-                        <InputLabel htmlFor="iv-value">{t('encryption.iv')}</InputLabel>
-                        <Input
-                            id="iv-value"
-                            value={iv}
-                            spellCheck={false}
-                            autoComplete="off"
-                            onChange={(e) => setIv(e.target.value)}
-                            fullWidth
-                            endAdornment={
-                                <InputAdornment position="end">
-                                    <IconButton
-                                        onClick={handleGenerateIV}
-                                        // 生成随机IV
-                                        title={t('encryption.generate_iv')}
-                                        size="small"
-                                    >
-                                        <RefreshIcon />
-                                    </IconButton>
-                                </InputAdornment>
-                            }
-                        />
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                            {/* 仅供随机生成 IV 示例，实际发送为随机值 */}
-                            {t('encryption.iv_description')}
-                        </Typography>
-                    </FormControl>
+                    {mode === 'GCM' && (
+                        <FormControl variant="standard">
+                            {/* IV */}
+                            <InputLabel htmlFor="iv-value">{t('encryption.iv')}</InputLabel>
+                            <Input
+                                id="iv-value"
+                                value={iv}
+                                spellCheck={false}
+                                autoComplete="off"
+                                onChange={(e) => setIv(e.target.value)}
+                                fullWidth
+                                endAdornment={
+                                    <InputAdornment position="end">
+                                        <IconButton
+                                            onClick={handleGenerateIV}
+                                            // 生成随机IV
+                                            title={t('encryption.generate_iv')}
+                                            size="small"
+                                        >
+                                            <RefreshIcon />
+                                        </IconButton>
+                                    </InputAdornment>
+                                }
+                            />
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                                {/* 仅供随机生成 IV 示例，实际发送为随机值 */}
+                                {t('encryption.iv_description')}
+                            </Typography>
+                        </FormControl>
+                    )}
                 </Stack>
+
             </DialogContent>
             <DialogActions>
                 {/* 取消 */}

@@ -333,6 +333,10 @@
     "about": {
         "title": "About",
         "version": "Version",
+        "official_website": {
+            "title": "Official Website",
+            "description": "Introduction, tutorials, FAQs, and more."
+        },
         "github": {
             "title": "GitHub",
             "description": "View source code or submit an issue",
@@ -419,6 +423,7 @@
             "p_copy": "copy",
             "p_url": "url",
             "p_action": "action",
+            "p_ttl": "TTL in seconds for saved push history; expired messages are auto-deleted",
             "tips": "Tips:",
             "tips_1": "For sound and encrypted parameters, tap \"Settings\" in the bottom navigation.",
             "tips_2": "Modified parameters are shown as tabs at the bottom. Tap to navigate, or right-click to reset.",
@@ -537,6 +542,7 @@
         "detail": {
             "title": "Push Details",
             "time": "Send Time",
+            "ttl": "Expire Time",
             "device": "Target Device",
             "sound": "Sound",
             "url": "URL",

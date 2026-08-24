@@ -36,6 +36,7 @@ export interface MessagePayload {
     isArchive?: '1'; // 传1保存推送，传其他的不保存推送，不传按APP内设置来决定是否保存
     url?: string; // 点击推送时，跳转的URL
     action?: 'none'; // 传"none"时，点击推送不会弹窗
+    ttl?: number; // 保存推送的有效期（秒），仅对保存到历史记录的消息生效
     markdown?: string; // markdown格式的推送内容，API v2 使用
     id?: string; // 作为请求参数里的id作为唯一标识，这个id后续修改撤回功能会用到
     delete?: '1'; // 传"1"配合id参数可以撤回推送
@@ -515,7 +516,16 @@ export async function sendPush(params: PushParams, encryptionConfig?: Encryption
                 }
                 return true;
             })
-            .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
+            .reduce((acc, [key, value]) => {
+                if (key === 'ttl') {
+                    const num = Number(value);
+                    if (!Number.isInteger(num) || num <= 0) {
+                        return acc;
+                    }
+                    return { ...acc, [key]: num };
+                }
+                return { ...acc, [key]: value };
+            }, {})
     };
     // 判断是否是 API v2 模式
     if (apiVersion === 'v2') {
@@ -554,6 +564,7 @@ export function getRequestParameters(params: PushParams, isEncrypted: boolean): 
         group: params.group,
         isArchive: params.isArchive,
         action: params.action,
+        ttl: params.ttl?.toString(),
         markdown: params.markdown,
         delete: params.delete
     };

@@ -30,7 +30,7 @@ import SecurityIcon from '@mui/icons-material/Security';
 import TuneIcon from '@mui/icons-material/Tune';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
-
+import PublicIcon from '@mui/icons-material/Public';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useTranslation } from 'react-i18next';
 import { Device, ThemeMode } from '../types';
@@ -42,7 +42,7 @@ import FeatureSettings from '../components/FeatureSettings';
 // import OtherSettings from '../components/OtherSettings';
 import OtherSettingsCard from '../components/OtherSettingsCard';
 import BackupRestoreCard from '../components/BackupRestoreCard';
-import { openGitHub, openBarkWebsite, openBarkApp, openStoreRating, } from '../utils/extension';
+import { openGitHub, openBarkWebsite, openBarkApp, openStoreRating, openOfficialWebsite } from '../utils/extension';
 
 
 interface SettingsProps {
@@ -528,8 +528,25 @@ export default function Settings({
                                         <OpenInNewIcon />
                                     </IconButton>
                                 </ListItem>
-
-
+                                <ListItem sx={{ px: 0 }}>
+                                    <ListItemText
+                                        primary={
+                                            <Stack direction="row" alignItems="center" spacing={1}>
+                                                <PublicIcon fontSize="small" />
+                                                <Typography variant="body1">
+                                                    {/* 官方网站 */}
+                                                    {t('about.official_website.title')}
+                                                </Typography>
+                                            </Stack>
+                                        }
+                                        secondary={<span style={{ paddingLeft: '2.4em', fontSize: '0.75rem' }}>{t('about.official_website.description')}</span>}
+                                        onClick={openOfficialWebsite}
+                                        sx={{ cursor: 'pointer' }}
+                                    />
+                                    <IconButton edge="end" onClick={openOfficialWebsite}>
+                                        <OpenInNewIcon />
+                                    </IconButton>
+                                </ListItem>
 
                             </List>
                         </Stack>

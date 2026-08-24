@@ -12,7 +12,7 @@ This project uses **WXT** (Web Extension Toolkit) to build browser extensions fo
 
 #### Required Programs and Versions
 
-1. **Node.js**: Version 20.0.0 or higher
+1. **Node.js**: Version 22.0.0 or higher
    - Download from: https://nodejs.org/
    - Verify installation: `node --version`
 
@@ -24,7 +24,7 @@ This project uses **WXT** (Web Extension Toolkit) to build browser extensions fo
 3. **TypeScript**: Version 5.8.3 (included in devDependencies)
    - Automatically installed via pnpm
 
-4. **WXT**: Version 0.20.6 (Web Extension Toolkit)
+4. **WXT**: Version 0.20.25 (Web Extension Toolkit)
    - Automatically installed via pnpm
    - Main build tool for the extension
 
@@ -93,7 +93,7 @@ This repository contains all source files, build scripts, and dependency declara
 - **React**: 19.1.0 - UI framework
 - **Material-UI**: 7.2.0 - UI components
 - **TypeScript**: 5.8.3 - Type system
-- **WXT**: 0.20.6 - Extension build toolkit
+- **WXT**: 0.20.25 - Extension build toolkit
 - **i18next**: 25.3.2 - Internationalization
 
 ### Development Dependencies

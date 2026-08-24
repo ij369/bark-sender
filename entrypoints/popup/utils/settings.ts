@@ -19,7 +19,8 @@ export const DEFAULT_ADVANCED_PARAMS = {
     group: "",
     isArchive: "",
     url: "",
-    action: ""
+    action: "",
+    ttl: ""
 };
 
 // 默认设置
