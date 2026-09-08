@@ -370,6 +370,8 @@
         "sending": "Sending...",
         "send_clipboard": "Send Clipboard Content",
         "reading_clipboard": "Reading clipboard...",
+        "send_website": "Send This Page Link",
+        "sending_website": "Getting page...",
         "shortcuts_tip": "Shortcuts Tips",
         "send_key": "{{key}} to send",
         "open_key": "{{key}} to open push window",
@@ -398,6 +400,7 @@
         "errors": {
             "no_device": "Please select a device",
             "no_content": "Please enter message content",
+            "no_webpage": "No web page found to send",
             "send_failed": "Send failed: {{message}}",
             "clipboard_failed": "Send clipboard failed: {{message}}"
         },

@@ -10,6 +10,21 @@ export default defineBackground(() => {
   const getStorageData = (...keys: string[]) =>
     browser.storage.local.get(keys) as Promise<Record<string, any>>;
 
+  // 获取当前活动标签页的地址 (供 popup 的 "发送此页面链接" 使用)
+  async function getActiveWebPage(): Promise<{ url: string; title?: string } | null> {
+    try {
+      const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+      const tab = tabs?.[0];
+      if (tab?.url) {
+        return { url: tab.url, title: tab.title || undefined };
+      }
+    } catch (error) {
+      console.debug('查询活动标签页失败:', error);
+    }
+
+    return null;
+  }
+
   // 初始化 i18n
   initBackgroundI18n();
   watchLanguageChanges();
@@ -187,6 +202,17 @@ export default defineBackground(() => {
       } else {
         sendResponse({ success: false, error: 'sidePanel API 不可用' });
       }
+      return true;
+    }
+
+    if (message.action === 'getActiveWebPage') {
+      getActiveWebPage()
+        .then(page => {
+          sendResponse({ success: true, page });
+        })
+        .catch(error => {
+          sendResponse({ success: false, error: error.message });
+        });
       return true;
     }
 
