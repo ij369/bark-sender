@@ -370,6 +370,8 @@
         "sending": "發送中...",
         "send_clipboard": "發送剪貼板內容",
         "reading_clipboard": "正在讀取剪貼板內容...",
+        "send_website": "傳送此頁面連結",
+        "sending_website": "正在取得網頁...",
         "shortcuts_tip": "快速鍵提示",
         "send_key": "{{key}} 發送",
         "open_key": "{{key}} 快速開啟推送視窗",
@@ -398,6 +400,7 @@
         "errors": {
             "no_device": "請選擇一個裝置",
             "no_content": "請輸入通知內容",
+            "no_webpage": "找不到可傳送的網頁",
             "send_failed": "發送失敗: {{message}}",
             "clipboard_failed": "發送剪貼板失敗: {{message}}"
         },

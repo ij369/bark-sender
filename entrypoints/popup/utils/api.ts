@@ -181,6 +181,130 @@ export async function sendPushMessage(
 }
 
 /**
+ * 发送"此页面链接"推送, 只带 title + url 不带 body,
+ * 与 content script 的 url 策略一致, 强制走 API v2 (仅 v2 可省略 body)
+ */
+export async function sendPageUrlPush(
+    device: Device,
+    title: string,
+    url: string,
+    advancedParams?: Record<string, any>,
+    devices?: Device[],
+    icon?: string,
+    uuid?: string
+): Promise<PushResponse> {
+    let response: PushResponse;
+    let isEncrypted = false;
+
+    try {
+        // 检查设置
+        const settings = await getAppSettings();
+        const pushUuid = uuid || generateID();
+
+        // 处理自定义参数
+        let processedAdvancedParams: Record<string, any> | undefined;
+        if (advancedParams) {
+            processedAdvancedParams = Object.fromEntries(
+                Object.entries(advancedParams).filter(([_, value]) =>
+                    value !== "" && value !== null && value !== undefined
+                )
+            );
+        }
+
+        // 确定最终使用的图标: 传入的 icon 优先, 否则回退自定义图标设置
+        let finalIcon: string | undefined;
+        if (icon) {
+            finalIcon = icon;
+        } else if (settings.enableCustomAvatar && settings.barkAvatarUrl) {
+            finalIcon = settings.barkAvatarUrl;
+        }
+
+        const pushParams: PushParams = {
+            apiURL: device.apiURL,
+            message: undefined as any, // 省略 body: 只发 title + url
+            devices: devices ? devices : [device], // 设备信息 (API v2 批量)
+            device_key: device.deviceKey,
+            device_keys: devices?.map(d => d.deviceKey).filter(Boolean) as string[],
+            sound: settings.sound,
+            uuid: pushUuid,
+            useAPIv2: true, // 强制 API v2 (v1 GET 无法省略 body)
+            title: processedAdvancedParams?.title || title,
+            url: processedAdvancedParams?.url || url,
+            ...(device.authorization && { authorization: device.authorization }),
+            ...(finalIcon && { icon: finalIcon }),
+            // 其他自定义参数 (排除已处理的 title/url)
+            ...(processedAdvancedParams && Object.fromEntries(
+                Object.entries(processedAdvancedParams).filter(([key]) =>
+                    !['title', 'url'].includes(key)
+                )
+            ))
+        };
+
+        // 根据是否启用加密选择发送方式 (API v2 为 POST)
+        if (settings.enableEncryption && settings.encryptionConfig?.key) {
+            isEncrypted = true;
+            response = await sendPushDirectly(pushParams, settings.encryptionConfig);
+        } else {
+            response = await sendPushDirectly(pushParams);
+        }
+
+        const parameters = getRequestParameters(pushParams, isEncrypted);
+
+        // 记录推送历史 (body 存 URL, 便于历史记录查看; 实际推送不含 body)
+        await recordPushHistory(
+            url,
+            device.apiURL,
+            device.alias,
+            response,
+            'POST',
+            {
+                title: pushParams.title,
+                sound: settings.sound,
+                url: pushParams.url,
+                isEncrypted,
+                uuid: pushUuid,
+                parameters,
+                authorization: device.authorization
+            }
+        );
+
+        return response;
+    } catch (error) {
+        console.error('发送页面链接推送失败:', error);
+
+        // 记录失败历史
+        if (device) {
+            const errorResponse = {
+                code: -1,
+                message: error instanceof Error ? error.message : 'common.error_unknown',
+                timestamp: Date.now()
+            };
+            try {
+                await recordPushHistory(
+                    url,
+                    device.apiURL,
+                    device.alias,
+                    errorResponse,
+                    'POST',
+                    {
+                        title,
+                        url,
+                        isEncrypted,
+                        uuid: generateID(),
+                        parameters: [],
+                        authorization: device.authorization
+                    }
+                );
+            } catch (recordError) {
+                console.error('记录失败历史时出错:', recordError);
+            }
+        }
+
+        throw error;
+    }
+}
+
+/**
  * 直接发送推送（优先直接请求，失败时回退到background script）
  */
 async function sendPushDirectly(params: PushParams, encryptionConfig?: EncryptionConfig): Promise<PushResponse> {

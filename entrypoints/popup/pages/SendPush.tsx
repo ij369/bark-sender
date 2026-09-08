@@ -20,6 +20,7 @@ import {
 
 import SendIcon from '@mui/icons-material/Send';
 import ContentPasteIcon from '@mui/icons-material/ContentPaste';
+import LinkIcon from '@mui/icons-material/Link';
 import KeyboardIcon from '@mui/icons-material/Keyboard';
 import UndoIcon from '@mui/icons-material/Undo';
 import CloseIcon from '@mui/icons-material/Close';
@@ -27,7 +28,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import { useTranslation } from 'react-i18next';
 import { Device } from '../types';
-import { sendPushMessage } from '../utils/api';
+import { sendPushMessage, sendPageUrlPush } from '../utils/api';
 import { generateID } from '../../shared/push-service';
 import { readClipboard } from '../utils/clipboard';
 import { getHistoryRecordByUuid, updateHistoryRecordStatus } from '../utils/database';
@@ -64,6 +65,7 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [clipboardLoading, setClipboardLoading] = useState(false);
+    const [websiteLoading, setWebsiteLoading] = useState(false); // 发送此页面链接 加载状态
     const [markdownEnabled, setMarkdownEnabled] = useState(false);
     const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const [shortcutDialogOpen, setShortcutDialogOpen] = useState(false);
@@ -465,6 +467,96 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
         }
     };
 
+    // 获取当前活动网页 (通过 background 获取, 支持 action popup / 侧边栏 / 小窗模式)
+    const getActiveWebPage = async (): Promise<{ url: string; title?: string } | null> => {
+        try {
+            const response = await browser.runtime.sendMessage({ action: 'getActiveWebPage' }) as any;
+            if (response?.success && response?.page) {
+                return response.page;
+            }
+            return null;
+        } catch (error) {
+            console.debug('获取当前网页失败:', error);
+            return null;
+        }
+    };
+
+    // 处理发送此页面链接
+    const handleSendWebsiteLink = async () => {
+        if (isApiV2 && selectedDevices.length === 0) {
+            /* 请选择至少一个设备 */
+            setResult({ type: 'error', message: t('push.errors.no_device') });
+            return;
+        } else if (!isApiV2 && !selectedDevice) {
+            /* 请选择一个设备 */
+            setResult({ type: 'error', message: t('push.errors.no_device') });
+            return;
+        }
+
+        setWebsiteLoading(true);
+        setResult(null);
+
+        try {
+            // 获取当前网页
+            const page = await getActiveWebPage();
+
+            if (!page || !page.url) {
+                /* 未找到可发送的网页 */
+                setResult({ type: 'error', message: t('push.errors.no_webpage') });
+                return;
+            }
+
+            const pushUuid = generateID();
+            setLastPushUuid(pushUuid);
+
+            // 复用 background 现有的 prefetchFavicon 能力 (与 UrlDialog 行为一致):
+            // 开启站点图标时让推送带上网页 favicon, 失败/关闭则回退自定义头像
+            let faviconUrl: string | null = null;
+            try {
+                const faviconResponse = await browser.runtime.sendMessage({
+                    action: 'prefetchFavicon',
+                    url: page.url
+                }) as any;
+                if (faviconResponse?.success && faviconResponse?.faviconUrl) {
+                    faviconUrl = faviconResponse.faviconUrl;
+                }
+            } catch (error) {
+                console.debug('预加载favicon失败:', error);
+            }
+
+            // 只带 title + url (点击跳转), 不带正文: 避免 Bark 把同一地址显示成两行
+            const response = await sendPageUrlPush(
+                isApiV2 ? selectedDevices[0] : selectedDevice!,
+                page.title || 'Web',
+                page.url,
+                advancedParams,
+                isApiV2 ? selectedDevices : undefined,
+                faviconUrl || undefined,
+                pushUuid
+            );
+
+            if (response.code === 200) {
+                /* 推送发送成功！ */
+                setResult({ type: 'success', message: t('push.success') });
+            } else {
+                /* 发送失败: {{message}} */
+                const errorMessage = response.message || t('common.error_unknown');
+                const finalMessage = errorMessage.startsWith('utils.api.') ? t(errorMessage) : errorMessage;
+                setResult({ type: 'error', message: t('push.errors.send_failed', { message: finalMessage }) });
+            }
+        } catch (error) {
+            /* 发送失败: {{message}} */
+            const errorMessage = error instanceof Error ? error.message : t('common.error_unknown'); // 未知错误
+            const finalMessage = errorMessage.startsWith('utils.api.') ? t(errorMessage) : errorMessage;
+            setResult({
+                type: 'error',
+                message: t('push.errors.send_failed', { message: finalMessage })
+            });
+        } finally {
+            setWebsiteLoading(false);
+        }
+    };
+
     const handleKeyDown = (event: React.KeyboardEvent) => {
         const isCorrectModifier = isAppleDevice
             ? (event.metaKey && !event.ctrlKey)
@@ -803,17 +895,50 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
                             {loading ? t('push.sending') : t('push.send')}
                         </Button>
 
-                        <Button
-                            variant="outlined"
-                            size="large"
-                            startIcon={clipboardLoading ? <CircularProgress size={20} /> : <ContentPasteIcon />}
-                            onClick={handleSendClipboard}
-                            disabled={loading || clipboardLoading}
-                            fullWidth
-                        >
-                            {/* 读取剪切板中... / 发送剪切板内容 */}
-                            {clipboardLoading ? t('push.reading_clipboard') : t('push.send_clipboard')}
-                        </Button>
+                        <Stack direction="row" spacing={1} sx={{ alignItems: 'stretch' }}>
+                            <Button
+                                variant="outlined"
+                                size="medium"
+                                startIcon={clipboardLoading ? <CircularProgress size={18} /> : <ContentPasteIcon />}
+                                onClick={handleSendClipboard}
+                                disabled={loading || clipboardLoading || websiteLoading}
+                                sx={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    px: 1,
+                                    textAlign: 'center',
+                                    whiteSpace: 'normal', // 允许换行, 避免文字超出框体
+                                    lineHeight: 1.2,
+                                    '& .MuiButton-startIcon': { mr: 0.5 },
+                                }}
+                            >
+                                {/* 读取剪切板中... / 发送剪切板内容 */}
+                                {clipboardLoading ? t('push.reading_clipboard') : t('push.send_clipboard')}
+                            </Button>
+
+                            {/* 小窗模式下无"当前页面"可发, 不显示此按钮 */}
+                            {!isWindowMode && (
+                                <Button
+                                    variant="outlined"
+                                    size="medium"
+                                    startIcon={websiteLoading ? <CircularProgress size={18} /> : <LinkIcon />}
+                                    onClick={handleSendWebsiteLink}
+                                    disabled={loading || clipboardLoading || websiteLoading}
+                                    sx={{
+                                        flex: 1,
+                                        minWidth: 0,
+                                        px: 1,
+                                        textAlign: 'center',
+                                        whiteSpace: 'normal', // 允许换行, 避免文字超出框体
+                                        lineHeight: 1.2,
+                                        '& .MuiButton-startIcon': { mr: 0.5 },
+                                    }}
+                                >
+                                    {/* 获取网页中... / 发送此页面链接 */}
+                                    {websiteLoading ? t('push.sending_website') : t('push.send_website')}
+                                </Button>
+                            )}
+                        </Stack>
 
                         <Collapse
                             in={!result}
