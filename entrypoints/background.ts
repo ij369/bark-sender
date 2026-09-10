@@ -11,8 +11,8 @@ export default defineBackground(() => {
     browser.storage.local.get(keys) as Promise<Record<string, any>>;
 
   // 获取当前活动标签页的地址 (供 popup/侧边栏 的 "发送此页面链接" 使用)
-  // 命名带 InPopup 后缀, 避免后续与其他取网页的逻辑混用; 只放行 http(s)
-  async function getActiveWebPageInPopup(): Promise<{ url: string; title?: string } | null> {
+  // 命名区分于其他取网页的逻辑; 只放行 http(s)
+  async function getActiveWebPageInPopupOrSidepanel(): Promise<{ url: string; title?: string } | null> {
     try {
       const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
       const tab = tabs?.[0];
@@ -206,8 +206,8 @@ export default defineBackground(() => {
       return true;
     }
 
-    if (message.action === 'getActiveWebPageInPopup') {
-      getActiveWebPageInPopup()
+    if (message.action === 'getActiveWebPageInPopupOrSidepanel') {
+      getActiveWebPageInPopupOrSidepanel()
         .then(page => {
           sendResponse({ success: true, page });
         })
