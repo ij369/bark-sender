@@ -80,6 +80,15 @@ export default function FeatureSettings({ devices, onError, onToast }: FeatureSe
         }
     };
 
+    // 处理"发送此页面链接"按钮开关切换
+    const handlePageLinkButtonToggle = async (enabled: boolean) => {
+        try {
+            await updateAppSetting('enablePageLinkButton', enabled);
+        } catch (error) {
+            onError(t('common.error_update', { message: error instanceof Error ? error.message : '未知错误' }));
+        }
+    };
+
     return (
         <Paper elevation={2} sx={{ p: 3 }}>
             <Stack spacing={3}>
@@ -147,6 +156,18 @@ export default function FeatureSettings({ devices, onError, onToast }: FeatureSe
 
                         {/* 启用极速模式 */}
                         <SpeedModeSetting disabled={devices.length === 0} />
+
+                        {/* 显示"发送此页面链接"按钮 */}
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={appSettings?.enablePageLinkButton || false}
+                                    onChange={(e) => handlePageLinkButtonToggle(e.target.checked)}
+                                />
+                            }
+                            label={t('settings.page_link.enable')}
+                            sx={{ userSelect: 'none' }}
+                        />
 
                         {/* 启用完整的参数配置 */}
                         <FormControlLabel

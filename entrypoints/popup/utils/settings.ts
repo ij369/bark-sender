@@ -50,6 +50,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     enableFileCache: true, // 文件缓存，默认开启
     showSidepanelButton: true, // 显示侧边栏按钮，默认开启（Chrome / Edge）
     actionClickBehavior: 'popup', // 扩展栏图标点击行为，默认 popup（Chrome / Edge）
+    enablePageLinkButton: false, // 发送此页面链接按钮，默认关闭
 };
 
 // 获取浏览器存储API
