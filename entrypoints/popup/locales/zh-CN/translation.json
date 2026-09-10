@@ -301,6 +301,9 @@
             "action_popup": "弹出窗口",
             "action_sidepanel": "侧边栏"
         },
+        "page_link": {
+            "enable": "显示发送此页面链接按钮"
+        },
         "other": {
             "interface": "界面相关",
             "misc": "杂项设置"
@@ -364,6 +367,8 @@
         "sending": "发送中...",
         "send_clipboard": "发送剪切板内容",
         "reading_clipboard": "读取剪切板中...",
+        "send_website": "发送此页面链接",
+        "sending_website": "获取网页中...",
         "shortcuts_tip": "快捷键提示",
         "send_key": "{{key}} 发送",
         "open_key": "{{key}} 快速打开推送窗口",
@@ -392,6 +397,7 @@
         "errors": {
             "no_device": "请选择一个设备",
             "no_content": "请输入推送内容",
+            "no_webpage": "未找到可发送的网页",
             "send_failed": "发送失败: {{message}}",
             "clipboard_failed": "发送剪切板失败: {{message}}"
         },

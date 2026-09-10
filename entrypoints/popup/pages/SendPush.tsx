@@ -20,6 +20,7 @@ import {
 
 import SendIcon from '@mui/icons-material/Send';
 import ContentPasteIcon from '@mui/icons-material/ContentPaste';
+import LinkIcon from '@mui/icons-material/Link';
 import KeyboardIcon from '@mui/icons-material/Keyboard';
 import UndoIcon from '@mui/icons-material/Undo';
 import CloseIcon from '@mui/icons-material/Close';
@@ -27,7 +28,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import { useTranslation } from 'react-i18next';
 import { Device } from '../types';
-import { sendPushMessage } from '../utils/api';
+import { sendPushMessage, sendPageUrlPush } from '../utils/api';
 import { generateID } from '../../shared/push-service';
 import { readClipboard } from '../utils/clipboard';
 import { getHistoryRecordByUuid, updateHistoryRecordStatus } from '../utils/database';
@@ -41,6 +42,51 @@ import UrlDialogV2 from '../components/UrlDialogV2';
 import AdvancedParamsEditor from '../components/AdvancedParamsEditor';
 import { getAppSettings } from '../utils/settings';
 import { SlideUpTransition } from '../components/DialogTransitions';
+
+// 并排时使用的按钮: 默认只显示图标, hover 时图标渐隐、文字渐显 (渐变过渡)
+interface IconFadeButtonProps {
+    loading: boolean;
+    icon: React.ReactNode;
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+}
+
+function IconFadeButton({ loading, icon, label, onClick, disabled }: IconFadeButtonProps) {
+    return (
+        <Button
+            variant="outlined"
+            size="large"
+            onClick={onClick}
+            disabled={disabled}
+            sx={{
+                flex: 1,
+                minWidth: 0,
+                position: 'relative',
+                overflow: 'hidden',
+                '& .fade-icon': {
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: 1,
+                    transition: 'opacity 180ms ease',
+                },
+                '& .fade-label': {
+                    opacity: 0,
+                    whiteSpace: 'nowrap',
+                    transition: 'opacity 180ms ease',
+                },
+                '&:hover .fade-icon': { opacity: 0 },
+                '&:hover .fade-label': { opacity: 1 },
+            }}
+        >
+            <Box className="fade-icon">{loading ? <CircularProgress size={20} /> : icon}</Box>
+            <Box className="fade-label">{label}</Box>
+        </Button>
+    );
+}
 
 interface SendPushProps {
     devices: Device[];
@@ -64,6 +110,7 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [clipboardLoading, setClipboardLoading] = useState(false);
+    const [websiteLoading, setWebsiteLoading] = useState(false); // 发送此页面链接 加载状态
     const [markdownEnabled, setMarkdownEnabled] = useState(false);
     const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const [shortcutDialogOpen, setShortcutDialogOpen] = useState(false);
@@ -129,6 +176,9 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
 
     // 检测是否是窗口模式
     const isWindowMode = new URLSearchParams(window.location.search).get('mode') === 'window';
+
+    // "发送此页面链接"按钮: 设置里开启才显示, 小窗模式下无当前页面可发故不显示
+    const showPageLinkButton = !isWindowMode && !!appSettings?.enablePageLinkButton;
 
     // 监听来自background的快捷键消息
     useEffect(() => {
@@ -462,6 +512,96 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
             });
         } finally {
             setClipboardLoading(false);
+        }
+    };
+
+    // 获取当前活动网页 (通过 background 获取, 支持 action popup / 侧边栏 / 小窗模式)
+    const getActiveWebPageInPopupOrSidepanel = async (): Promise<{ url: string; title?: string } | null> => {
+        try {
+            const response = await browser.runtime.sendMessage({ action: 'getActiveWebPageInPopupOrSidepanel' }) as any;
+            if (response?.success && response?.page) {
+                return response.page;
+            }
+            return null;
+        } catch (error) {
+            console.debug('获取当前网页失败:', error);
+            return null;
+        }
+    };
+
+    // 处理发送此页面链接
+    const handleSendWebsiteLink = async () => {
+        if (isApiV2 && selectedDevices.length === 0) {
+            /* 请选择至少一个设备 */
+            setResult({ type: 'error', message: t('push.errors.no_device') });
+            return;
+        } else if (!isApiV2 && !selectedDevice) {
+            /* 请选择一个设备 */
+            setResult({ type: 'error', message: t('push.errors.no_device') });
+            return;
+        }
+
+        setWebsiteLoading(true);
+        setResult(null);
+
+        try {
+            // 获取当前网页
+            const page = await getActiveWebPageInPopupOrSidepanel();
+
+            if (!page || !page.url) {
+                /* 未找到可发送的网页 */
+                setResult({ type: 'error', message: t('push.errors.no_webpage') });
+                return;
+            }
+
+            const pushUuid = generateID();
+            setLastPushUuid(pushUuid);
+
+            // 复用 background 现有的 prefetchFavicon 能力 (与 UrlDialog 行为一致):
+            // 开启站点图标时让推送带上网页 favicon, 失败/关闭则回退自定义头像
+            let faviconUrl: string | null = null;
+            try {
+                const faviconResponse = await browser.runtime.sendMessage({
+                    action: 'prefetchFavicon',
+                    url: page.url
+                }) as any;
+                if (faviconResponse?.success && faviconResponse?.faviconUrl) {
+                    faviconUrl = faviconResponse.faviconUrl;
+                }
+            } catch (error) {
+                console.debug('预加载favicon失败:', error);
+            }
+
+            // 只带 title + url (点击跳转), 不带正文: 避免 Bark 把同一地址显示成两行
+            const response = await sendPageUrlPush(
+                isApiV2 ? selectedDevices[0] : selectedDevice!,
+                page.title || 'Web',
+                page.url,
+                advancedParams,
+                isApiV2 ? selectedDevices : undefined,
+                faviconUrl || undefined,
+                pushUuid
+            );
+
+            if (response.code === 200) {
+                /* 推送发送成功！ */
+                setResult({ type: 'success', message: t('push.success') });
+            } else {
+                /* 发送失败: {{message}} */
+                const errorMessage = response.message || t('common.error_unknown');
+                const finalMessage = errorMessage.startsWith('utils.api.') ? t(errorMessage) : errorMessage;
+                setResult({ type: 'error', message: t('push.errors.send_failed', { message: finalMessage }) });
+            }
+        } catch (error) {
+            /* 发送失败: {{message}} */
+            const errorMessage = error instanceof Error ? error.message : t('common.error_unknown'); // 未知错误
+            const finalMessage = errorMessage.startsWith('utils.api.') ? t(errorMessage) : errorMessage;
+            setResult({
+                type: 'error',
+                message: t('push.errors.send_failed', { message: finalMessage })
+            });
+        } finally {
+            setWebsiteLoading(false);
         }
     };
 
@@ -803,17 +943,36 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
                             {loading ? t('push.sending') : t('push.send')}
                         </Button>
 
-                        <Button
-                            variant="outlined"
-                            size="large"
-                            startIcon={clipboardLoading ? <CircularProgress size={20} /> : <ContentPasteIcon />}
-                            onClick={handleSendClipboard}
-                            disabled={loading || clipboardLoading}
-                            fullWidth
-                        >
-                            {/* 读取剪切板中... / 发送剪切板内容 */}
-                            {clipboardLoading ? t('push.reading_clipboard') : t('push.send_clipboard')}
-                        </Button>
+                        {showPageLinkButton ? (
+                            <Stack direction="row" spacing={1}>
+                                <IconFadeButton
+                                    loading={clipboardLoading}
+                                    icon={<ContentPasteIcon fontSize="small" />}
+                                    label={clipboardLoading ? t('push.reading_clipboard') : t('push.send_clipboard')}
+                                    onClick={handleSendClipboard}
+                                    disabled={loading || clipboardLoading || websiteLoading}
+                                />
+                                <IconFadeButton
+                                    loading={websiteLoading}
+                                    icon={<LinkIcon fontSize="small" />}
+                                    label={websiteLoading ? t('push.sending_website') : t('push.send_website')}
+                                    onClick={handleSendWebsiteLink}
+                                    disabled={loading || clipboardLoading || websiteLoading}
+                                />
+                            </Stack>
+                        ) : (
+                            <Button
+                                variant="outlined"
+                                size="large"
+                                startIcon={clipboardLoading ? <CircularProgress size={20} /> : <ContentPasteIcon />}
+                                onClick={handleSendClipboard}
+                                disabled={loading || clipboardLoading}
+                                fullWidth
+                            >
+                                {/* 读取剪切板中... / 发送剪切板内容 */}
+                                {clipboardLoading ? t('push.reading_clipboard') : t('push.send_clipboard')}
+                            </Button>
+                        )}
 
                         <Collapse
                             in={!result}
