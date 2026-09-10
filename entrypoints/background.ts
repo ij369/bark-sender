@@ -10,9 +10,9 @@ export default defineBackground(() => {
   const getStorageData = (...keys: string[]) =>
     browser.storage.local.get(keys) as Promise<Record<string, any>>;
 
-  // 获取当前活动标签页的地址 (供 popup 的 "发送此页面链接" 使用)
-  // 只放行 http(s), 与项目其他发送页面的入口一致
-  async function getActiveWebPage(): Promise<{ url: string; title?: string } | null> {
+  // 获取当前活动标签页的地址 (供 popup/侧边栏 的 "发送此页面链接" 使用)
+  // 命名带 InPopup 后缀, 避免后续与其他取网页的逻辑混用; 只放行 http(s)
+  async function getActiveWebPageInPopup(): Promise<{ url: string; title?: string } | null> {
     try {
       const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
       const tab = tabs?.[0];
@@ -206,8 +206,8 @@ export default defineBackground(() => {
       return true;
     }
 
-    if (message.action === 'getActiveWebPage') {
-      getActiveWebPage()
+    if (message.action === 'getActiveWebPageInPopup') {
+      getActiveWebPageInPopup()
         .then(page => {
           sendResponse({ success: true, page });
         })
