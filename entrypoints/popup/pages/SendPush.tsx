@@ -132,6 +132,9 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
     // 检测是否是窗口模式
     const isWindowMode = new URLSearchParams(window.location.search).get('mode') === 'window';
 
+    // "发送此页面链接"按钮: 设置里开启才显示, 小窗模式下无当前页面可发故不显示
+    const showPageLinkButton = !isWindowMode && !!appSettings?.enablePageLinkButton;
+
     // 监听来自background的快捷键消息
     useEffect(() => {
         const handleMessage = (message: any) => {
@@ -895,50 +898,32 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
                             {loading ? t('push.sending') : t('push.send')}
                         </Button>
 
-                        <Stack direction="row" spacing={1} sx={{ alignItems: 'stretch' }}>
+                        <Button
+                            variant="outlined"
+                            size="large"
+                            startIcon={clipboardLoading ? <CircularProgress size={20} /> : <ContentPasteIcon />}
+                            onClick={handleSendClipboard}
+                            disabled={loading || clipboardLoading || websiteLoading}
+                            fullWidth
+                        >
+                            {/* 读取剪切板中... / 发送剪切板内容 */}
+                            {clipboardLoading ? t('push.reading_clipboard') : t('push.send_clipboard')}
+                        </Button>
+
+                        {/* 发送此页面链接: 设置里开启后显示, 独占一排避免本地化文案挤压 */}
+                        {showPageLinkButton && (
                             <Button
                                 variant="outlined"
-                                size="medium"
-                                startIcon={clipboardLoading ? <CircularProgress size={18} /> : <ContentPasteIcon />}
-                                onClick={handleSendClipboard}
+                                size="large"
+                                startIcon={websiteLoading ? <CircularProgress size={20} /> : <LinkIcon />}
+                                onClick={handleSendWebsiteLink}
                                 disabled={loading || clipboardLoading || websiteLoading}
-                                sx={{
-                                    flex: 1,
-                                    minWidth: 0,
-                                    px: 1,
-                                    textAlign: 'center',
-                                    whiteSpace: 'normal', // 允许换行, 避免文字超出框体
-                                    lineHeight: 1.2,
-                                    '& .MuiButton-startIcon': { mr: 0.5 },
-                                }}
+                                fullWidth
                             >
-                                {/* 读取剪切板中... / 发送剪切板内容 */}
-                                {clipboardLoading ? t('push.reading_clipboard') : t('push.send_clipboard')}
+                                {/* 获取网页中... / 发送此页面链接 */}
+                                {websiteLoading ? t('push.sending_website') : t('push.send_website')}
                             </Button>
-
-                            {/* 小窗模式下无"当前页面"可发, 不显示此按钮 */}
-                            {!isWindowMode && (
-                                <Button
-                                    variant="outlined"
-                                    size="medium"
-                                    startIcon={websiteLoading ? <CircularProgress size={18} /> : <LinkIcon />}
-                                    onClick={handleSendWebsiteLink}
-                                    disabled={loading || clipboardLoading || websiteLoading}
-                                    sx={{
-                                        flex: 1,
-                                        minWidth: 0,
-                                        px: 1,
-                                        textAlign: 'center',
-                                        whiteSpace: 'normal', // 允许换行, 避免文字超出框体
-                                        lineHeight: 1.2,
-                                        '& .MuiButton-startIcon': { mr: 0.5 },
-                                    }}
-                                >
-                                    {/* 获取网页中... / 发送此页面链接 */}
-                                    {websiteLoading ? t('push.sending_website') : t('push.send_website')}
-                                </Button>
-                            )}
-                        </Stack>
+                        )}
 
                         <Collapse
                             in={!result}

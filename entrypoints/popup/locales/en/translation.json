@@ -307,6 +307,9 @@
             "action_popup": "Popup",
             "action_sidepanel": "Side Panel"
         },
+        "page_link": {
+            "enable": "Show Send This Page Link Button"
+        },
         "other": {
             "interface": "Interface",
             "misc": "Misc"

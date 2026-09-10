@@ -307,6 +307,9 @@
             "action_popup": "彈出視窗",
             "action_sidepanel": "側邊欄"
         },
+        "page_link": {
+            "enable": "顯示傳送此頁面連結按鈕"
+        },
         "other": {
             "interface": "界面相關",
             "misc": "雜項設定"

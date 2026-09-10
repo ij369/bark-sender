@@ -301,6 +301,9 @@
             "action_popup": "弹出窗口",
             "action_sidepanel": "侧边栏"
         },
+        "page_link": {
+            "enable": "显示发送此页面链接按钮"
+        },
         "other": {
             "interface": "界面相关",
             "misc": "杂项设置"
