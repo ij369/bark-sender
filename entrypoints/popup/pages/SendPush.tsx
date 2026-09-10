@@ -516,9 +516,9 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
     };
 
     // 获取当前活动网页 (通过 background 获取, 支持 action popup / 侧边栏 / 小窗模式)
-    const getActiveWebPageInPopup = async (): Promise<{ url: string; title?: string } | null> => {
+    const getActiveWebPageInPopupOrSidepanel = async (): Promise<{ url: string; title?: string } | null> => {
         try {
-            const response = await browser.runtime.sendMessage({ action: 'getActiveWebPageInPopup' }) as any;
+            const response = await browser.runtime.sendMessage({ action: 'getActiveWebPageInPopupOrSidepanel' }) as any;
             if (response?.success && response?.page) {
                 return response.page;
             }
@@ -546,7 +546,7 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
 
         try {
             // 获取当前网页
-            const page = await getActiveWebPageInPopup();
+            const page = await getActiveWebPageInPopupOrSidepanel();
 
             if (!page || !page.url) {
                 /* 未找到可发送的网页 */
