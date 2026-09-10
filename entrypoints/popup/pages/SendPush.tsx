@@ -43,6 +43,51 @@ import AdvancedParamsEditor from '../components/AdvancedParamsEditor';
 import { getAppSettings } from '../utils/settings';
 import { SlideUpTransition } from '../components/DialogTransitions';
 
+// 并排时使用的按钮: 默认只显示图标, hover 时图标渐隐、文字渐显 (渐变过渡)
+interface IconFadeButtonProps {
+    loading: boolean;
+    icon: React.ReactNode;
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+}
+
+function IconFadeButton({ loading, icon, label, onClick, disabled }: IconFadeButtonProps) {
+    return (
+        <Button
+            variant="outlined"
+            size="large"
+            onClick={onClick}
+            disabled={disabled}
+            sx={{
+                flex: 1,
+                minWidth: 0,
+                position: 'relative',
+                overflow: 'hidden',
+                '& .fade-icon': {
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: 1,
+                    transition: 'opacity 180ms ease',
+                },
+                '& .fade-label': {
+                    opacity: 0,
+                    whiteSpace: 'nowrap',
+                    transition: 'opacity 180ms ease',
+                },
+                '&:hover .fade-icon': { opacity: 0 },
+                '&:hover .fade-label': { opacity: 1 },
+            }}
+        >
+            <Box className="fade-icon">{loading ? <CircularProgress size={20} /> : icon}</Box>
+            <Box className="fade-label">{label}</Box>
+        </Button>
+    );
+}
+
 interface SendPushProps {
     devices: Device[];
     defaultDevice: Device | null;
@@ -898,30 +943,34 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
                             {loading ? t('push.sending') : t('push.send')}
                         </Button>
 
-                        <Button
-                            variant="outlined"
-                            size="large"
-                            startIcon={clipboardLoading ? <CircularProgress size={20} /> : <ContentPasteIcon />}
-                            onClick={handleSendClipboard}
-                            disabled={loading || clipboardLoading || websiteLoading}
-                            fullWidth
-                        >
-                            {/* 读取剪切板中... / 发送剪切板内容 */}
-                            {clipboardLoading ? t('push.reading_clipboard') : t('push.send_clipboard')}
-                        </Button>
-
-                        {/* 发送此页面链接: 设置里开启后显示, 独占一排避免本地化文案挤压 */}
-                        {showPageLinkButton && (
+                        {showPageLinkButton ? (
+                            <Stack direction="row" spacing={1}>
+                                <IconFadeButton
+                                    loading={clipboardLoading}
+                                    icon={<ContentPasteIcon fontSize="small" />}
+                                    label={clipboardLoading ? t('push.reading_clipboard') : t('push.send_clipboard')}
+                                    onClick={handleSendClipboard}
+                                    disabled={loading || clipboardLoading || websiteLoading}
+                                />
+                                <IconFadeButton
+                                    loading={websiteLoading}
+                                    icon={<LinkIcon fontSize="small" />}
+                                    label={websiteLoading ? t('push.sending_website') : t('push.send_website')}
+                                    onClick={handleSendWebsiteLink}
+                                    disabled={loading || clipboardLoading || websiteLoading}
+                                />
+                            </Stack>
+                        ) : (
                             <Button
                                 variant="outlined"
                                 size="large"
-                                startIcon={websiteLoading ? <CircularProgress size={20} /> : <LinkIcon />}
-                                onClick={handleSendWebsiteLink}
-                                disabled={loading || clipboardLoading || websiteLoading}
+                                startIcon={clipboardLoading ? <CircularProgress size={20} /> : <ContentPasteIcon />}
+                                onClick={handleSendClipboard}
+                                disabled={loading || clipboardLoading}
                                 fullWidth
                             >
-                                {/* 获取网页中... / 发送此页面链接 */}
-                                {websiteLoading ? t('push.sending_website') : t('push.send_website')}
+                                {/* 读取剪切板中... / 发送剪切板内容 */}
+                                {clipboardLoading ? t('push.reading_clipboard') : t('push.send_clipboard')}
                             </Button>
                         )}
 
