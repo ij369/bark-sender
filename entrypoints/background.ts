@@ -11,11 +11,12 @@ export default defineBackground(() => {
     browser.storage.local.get(keys) as Promise<Record<string, any>>;
 
   // 获取当前活动标签页的地址 (供 popup 的 "发送此页面链接" 使用)
+  // 只放行 http(s), 与项目其他发送页面的入口一致
   async function getActiveWebPage(): Promise<{ url: string; title?: string } | null> {
     try {
       const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
       const tab = tabs?.[0];
-      if (tab?.url) {
+      if (tab?.url && (tab.url.startsWith('http://') || tab.url.startsWith('https://'))) {
         return { url: tab.url, title: tab.title || undefined };
       }
     } catch (error) {
