@@ -290,7 +290,7 @@ export async function sendPageUrlPush(
                         title,
                         url,
                         isEncrypted,
-                        uuid: generateID(),
+                        uuid: uuid || generateID(),
                         parameters: [],
                         authorization: device.authorization
                     }
