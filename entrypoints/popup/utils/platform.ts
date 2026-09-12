@@ -94,3 +94,12 @@ export function isChromium(): boolean {
     const b = detectBrowser();
     return ['chrome', 'edge'].includes(b);
 }
+
+/**
+ * Safari 工具栏 popup 需用 transform 模拟滚动
+ */
+export function needsTransformScroll(): boolean {
+    return typeof window !== 'undefined'
+        && detectBrowser() === 'safari'
+        && !['window', 'sidepanel'].includes(new URLSearchParams(window.location.search).get('mode') ?? '');
+}

@@ -42,6 +42,7 @@ import FeatureSettings from '../components/FeatureSettings';
 // import OtherSettings from '../components/OtherSettings';
 import OtherSettingsCard from '../components/OtherSettingsCard';
 import BackupRestoreCard from '../components/BackupRestoreCard';
+import TransformScrollView from '../components/TransformScrollView';
 import { openGitHub, openBarkWebsite, openBarkApp, openStoreRating, openOfficialWebsite } from '../utils/extension';
 
 
@@ -184,26 +185,28 @@ export default function Settings({
     }, []);
 
     return (
-        <Box
-            sx={{
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-            }}
-        >
+        <>
             <Box
                 sx={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    p: 2,
+                    height: '100%',
+                    minHeight: 0,
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 2,
-                    minHeight: 'min-content' // 确保内容可以撑开
+                    position: 'relative',
                 }}
             >
-                {/* 顶部加载中进度条 绝对定位 */}
-                {loading && <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000 }} />}
+                {loading && (
+                    <LinearProgress
+                        sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            zIndex: 10,
+                        }}
+                    />
+                )}
+                <TransformScrollView>
                 {/* 设备管理卡片 */}
                 <Paper elevation={2} sx={{ p: 3 }}>
                     <Stack spacing={3}>
@@ -555,10 +558,8 @@ export default function Settings({
                     {version && (
                         <Stack sx={{
                             textAlign: 'center',
-                            position: 'sticky',
                             width: '100%',
-                            bottom: '8px',
-                            zIndex: 1,
+                            py: 1,
                             opacity: 0.5
                         }} gap={.3}>
 
@@ -588,7 +589,7 @@ export default function Settings({
                         </Stack>
                     )}
                 </Box>
-
+                </TransformScrollView>
             </Box>
 
             <DeviceDialog
@@ -628,6 +629,6 @@ export default function Settings({
                 onClose={() => setToast({ ...toast, open: false })}
                 message={toast.message}
             />
-        </Box>
+        </>
     );
 } 

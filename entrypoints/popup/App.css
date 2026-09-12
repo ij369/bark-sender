@@ -147,3 +147,90 @@ body {
 [data-theme="dark"] *::-webkit-scrollbar-corner {
   background-color: #2b2b2b;
 }
+
+/* 自定义滚动条，视觉上 Safari popup 减缓感官卡顿问题 */
+.u-transform-scroll-view {
+  --scroll-y: 0px;
+  --thumb-y: 0px;
+  --thumb-height: 24px;
+  --fake-scrollbar-size: 8px;
+  --fake-scrollbar-inset-y: 3px;
+  --fake-scrollbar-inset-x: 2px;
+  --fake-scrollbar-radius: 4px;
+  --fake-scrollbar-hit-width: 14px;
+  --fake-scrollbar-thumb: rgba(0, 0, 0, 0.28);
+  --fake-scrollbar-thumb-hover: rgba(0, 0, 0, 0.4);
+  --fake-scrollbar-thumb-active: rgba(0, 0, 0, 0.52);
+  scrollbar-width: none;
+}
+
+.u-transform-scroll-content {
+  transform: translate3d(0, calc(-1 * var(--scroll-y, 0px)), 0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+.u-transform-scroll-view * {
+  scrollbar-width: none;
+}
+
+.u-transform-scroll-view *::-webkit-scrollbar {
+  display: none;
+}
+
+[data-theme="dark"] .u-transform-scroll-view {
+  --fake-scrollbar-thumb: rgba(255, 255, 255, 0.36);
+  --fake-scrollbar-thumb-hover: rgba(255, 255, 255, 0.48);
+  --fake-scrollbar-thumb-active: rgba(255, 255, 255, 0.6);
+}
+
+.u-fake-scrollbar-rail {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--fake-scrollbar-hit-width);
+  z-index: 2;
+}
+
+/* 拖拽 thumb 时屏蔽内容区 hover，避免指针样式闪烁 */
+.u-transform-scroll-drag-shield {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  cursor: default;
+  user-select: none;
+}
+
+.u-transform-scroll-view.is-thumb-dragging {
+  cursor: default;
+}
+
+.u-fake-scrollbar-thumb {
+  position: absolute;
+  top: var(--fake-scrollbar-inset-y);
+  right: var(--fake-scrollbar-inset-x);
+  width: var(--fake-scrollbar-size);
+  height: var(--thumb-height, 24px);
+  border-radius: var(--fake-scrollbar-radius);
+  background-color: var(--fake-scrollbar-thumb);
+  cursor: default;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(0, var(--thumb-y, 0px), 0);
+  will-change: transform;
+  transition: opacity 0.25s ease, background-color 0.15s ease;
+}
+
+.u-fake-scrollbar-thumb.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.u-fake-scrollbar-thumb:hover {
+  background-color: var(--fake-scrollbar-thumb-hover);
+}
+
+.u-fake-scrollbar-thumb:active {
+  background-color: var(--fake-scrollbar-thumb-active);
+}

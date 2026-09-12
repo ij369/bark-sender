@@ -26,6 +26,7 @@ import { Device, Sound } from '../types';
 import { sendPushMessage } from '../utils/api';
 import { generateID } from '../../shared/push-service';
 import { SlideUpTransition } from './DialogTransitions';
+import TransformScrollView from './TransformScrollView';
 
 const sounds: Sound[] = [
     {
@@ -250,7 +251,8 @@ export default function SoundDialog({ open, currentSound, onClose, onSave }: Sou
                     {/* 铃声设置 */}
                     {t('settings.sound.title')}
                 </DialogTitle>
-                <DialogContent dividers>
+                <DialogContent dividers sx={{ p: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                    <TransformScrollView resetKey={open} contentSx={{ px: 3, py: 2 }}>
                     <Stack spacing={2}>
                         <Typography variant="caption" color="text.secondary">
                             {/* 选择推送时使用的铃声，留空则用默认铃声 */}
@@ -363,6 +365,7 @@ export default function SoundDialog({ open, currentSound, onClose, onSave }: Sou
                             </Grid>
                         </Grid>
                     </Stack>
+                    </TransformScrollView>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleClear} color="error"

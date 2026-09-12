@@ -22,7 +22,7 @@ import { TabValue } from '../types';
 import { useAppContext } from '../contexts/AppContext';
 import LanguageSelect from './LanguageSelect';
 import SidePanelIcon from './SidePanelIcon';
-import { detectPlatform, isChromium } from '../utils/platform';
+import { detectPlatform, isChromium, needsTransformScroll } from '../utils/platform';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -178,7 +178,7 @@ export default function Layout({
                 <Box
                     sx={{
                         flex: '1 1 0%',
-                        overflowY: 'auto',
+                        overflowY: currentTab === 'settings' && needsTransformScroll() ? 'hidden' : 'auto',
                         display: 'flex',
                         flexDirection: 'column',
                         minHeight: 0 // 确保内容区域能够正确收缩

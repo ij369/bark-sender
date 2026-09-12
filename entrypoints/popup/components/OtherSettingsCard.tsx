@@ -17,6 +17,7 @@ import { SlideLeftTransition } from './DialogTransitions';
 import { useTranslation } from 'react-i18next';
 import { ThemeMode } from '../types';
 import OtherSettings from './OtherSettings';
+import TransformScrollView from './TransformScrollView';
 
 
 interface OtherSettingsCardProps {
@@ -58,7 +59,7 @@ export default function OtherSettingsCard({ themeMode, onThemeChange, onError, o
                 }}
                 onClose={handleClose}
                 fullScreen
-                sx={{ '& .MuiDialog-paper': { borderRadius: 0, border: 'none' } }}
+                sx={{ '& .MuiDialog-paper': { borderRadius: 0, border: 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden' } }}
             >
                 <AppBar sx={{ position: 'relative' }}>
                     <Toolbar variant="dense">
@@ -77,12 +78,11 @@ export default function OtherSettingsCard({ themeMode, onThemeChange, onError, o
                     </Toolbar>
                 </AppBar>
 
-                {/* 内容区域 */}
-                <Box sx={{ p: 3, flex: 1, overflow: 'auto' }}>
-                    <Stack spacing={3} sx={{ maxWidth: 600, mx: 'auto' }}>
+                <TransformScrollView resetKey={dialogOpen} contentSx={{ p: 3 }}>
+                    <Stack spacing={3} sx={{ width: '100%', maxWidth: 600, mx: 'auto' }}>
                         <OtherSettings themeMode={themeMode} onThemeChange={onThemeChange} onError={onError} onToast={onToast} />
                     </Stack>
-                </Box>
+                </TransformScrollView>
             </Dialog>
         </>
     );
