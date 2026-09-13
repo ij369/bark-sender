@@ -195,6 +195,7 @@ export async function sendPageUrlPush(
 ): Promise<PushResponse> {
     let response: PushResponse;
     let isEncrypted = false;
+    let method: 'GET' | 'POST' = 'GET';
 
     try {
         // 检查设置
@@ -227,7 +228,7 @@ export async function sendPageUrlPush(
             device_keys: devices?.map(d => d.deviceKey).filter(Boolean) as string[],
             sound: settings.sound,
             uuid: pushUuid,
-            useAPIv2: true, // 强制 API v2 (v1 GET 无法省略 body)
+            useAPIv2: !!settings.enableApiV2, // 跟随设置, 与 sendPushMessage / 右键菜单一致
             title: processedAdvancedParams?.title || title,
             url: processedAdvancedParams?.url || url,
             ...(device.authorization && { authorization: device.authorization }),
@@ -240,11 +241,13 @@ export async function sendPageUrlPush(
             ))
         };
 
-        // 根据是否启用加密选择发送方式 (API v2 为 POST)
+        // 根据是否启用加密和 API 版本选择发送方式 (API v2 为 POST)
         if (settings.enableEncryption && settings.encryptionConfig?.key) {
+            method = 'POST';
             isEncrypted = true;
             response = await sendPushDirectly(pushParams, settings.encryptionConfig);
         } else {
+            method = settings.enableApiV2 ? 'POST' : 'GET';
             response = await sendPushDirectly(pushParams);
         }
 
@@ -256,7 +259,7 @@ export async function sendPageUrlPush(
             device.apiURL,
             device.alias,
             response,
-            'POST',
+            method,
             {
                 title: pushParams.title,
                 sound: settings.sound,
@@ -285,7 +288,7 @@ export async function sendPageUrlPush(
                     device.apiURL,
                     device.alias,
                     errorResponse,
-                    'POST',
+                    method,
                     {
                         title,
                         url,
