@@ -28,7 +28,7 @@ import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import { useTranslation } from 'react-i18next';
 import { Device } from '../types';
-import { sendPushMessage, sendPageUrlPush } from '../utils/api';
+import { sendPushMessage } from '../utils/api';
 import { generateID } from '../../shared/push-service';
 import { readClipboard } from '../utils/clipboard';
 import { getHistoryRecordByUuid, updateHistoryRecordStatus } from '../utils/database';
@@ -572,15 +572,20 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
                 console.debug('预加载favicon失败:', error);
             }
 
-            // 只带 title + url (点击跳转), 不带正文: 避免 Bark 把同一地址显示成两行
-            const response = await sendPageUrlPush(
+            // 复用 sendPushMessage (与 UrlDialog 的"发送当前页面"一致):
+            // title + url + body(链接地址), urlDialogSend=true 让该路径也支持简化处理
+            const response = await sendPushMessage(
                 isApiV2 ? selectedDevices[0] : selectedDevice!,
-                page.title || 'Web',
-                page.url,
+                page.url, // message/body = 链接地址, Bark 通知里可辨认可点击
+                undefined,
+                pushUuid,
+                page.title || 'Web', // 推送标题
+                page.url, // url 参数: 点击推送跳转
                 advancedParams,
                 isApiV2 ? selectedDevices : undefined,
                 faviconUrl || undefined,
-                pushUuid
+                undefined,
+                true // urlDialogSend
             );
 
             if (response.code === 200) {
