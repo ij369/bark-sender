@@ -181,8 +181,8 @@ export async function sendPushMessage(
 }
 
 /**
- * 发送"此页面链接"推送, 只带 title + url 不带 body,
- * 与 content script 的 url 策略一致, 强制走 API v2 (仅 v2 可省略 body)
+ * 发送"此页面链接"推送: title + url + body(链接地址) 都带上,
+ * body 让 Bark 通知显示可辨认的链接地址, 与现有 send-page / UrlDialog 行为对齐
  */
 export async function sendPageUrlPush(
     device: Device,
@@ -221,7 +221,7 @@ export async function sendPageUrlPush(
 
         const pushParams: PushParams = {
             apiURL: device.apiURL,
-            message: undefined as any, // 省略 body: 只发 title + url
+            message: url, // body 保留链接地址: Bark 通知可显示/点击, 便于辨认是哪个页面
             devices: devices ? devices : [device], // 设备信息 (API v2 批量)
             device_key: device.deviceKey,
             device_keys: devices?.map(d => d.deviceKey).filter(Boolean) as string[],
@@ -250,7 +250,7 @@ export async function sendPageUrlPush(
 
         const parameters = getRequestParameters(pushParams, isEncrypted);
 
-        // 记录推送历史 (body 存 URL, 便于历史记录查看; 实际推送不含 body)
+        // 记录推送历史 (与推送内容一致, body 存链接地址)
         await recordPushHistory(
             url,
             device.apiURL,
