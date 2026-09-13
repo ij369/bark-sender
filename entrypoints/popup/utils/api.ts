@@ -241,6 +241,19 @@ export async function sendPageUrlPush(
             ))
         };
 
+        // 简化处理 (与 sendPushMessage / UrlDialog 一致): 开启后只保留可复制的正文
+        const { simplifiedActive, resolvedCopy } = resolveSimplifiedProcessing({
+            enableSimplifiedProcessing: !!settings.enableSimplifiedProcessing,
+            copy: pushParams.copy,
+            fallbackCopyContent: url
+        });
+        if (simplifiedActive) {
+            pushParams.message = resolvedCopy;
+            pushParams.title = undefined;
+            pushParams.url = undefined;
+            pushParams.copy = undefined;
+        }
+
         // 根据是否启用加密和 API 版本选择发送方式 (API v2 为 POST)
         if (settings.enableEncryption && settings.encryptionConfig?.key) {
             method = 'POST';
@@ -253,9 +266,9 @@ export async function sendPageUrlPush(
 
         const parameters = getRequestParameters(pushParams, isEncrypted);
 
-        // 记录推送历史 (与推送内容一致, body 存链接地址)
+        // 记录推送历史 (与推送内容一致)
         await recordPushHistory(
-            url,
+            pushParams.message,
             device.apiURL,
             device.alias,
             response,
