@@ -79,6 +79,7 @@ export interface AppSettings {
     enableFileCache?: boolean; // 是否启用文件缓存
     showSidepanelButton?: boolean; // 是否在 AppBar 中显示侧边栏按钮
     actionClickBehavior?: ActionClickBehavior; // 扩展栏图标点击行为
+    enablePageLinkButton?: boolean; // 是否显示"发送此页面链接"按钮
 }
 // 平台类型
 export type PlatformType = 'mac' | 'windows' | 'linux' | 'unknown';
