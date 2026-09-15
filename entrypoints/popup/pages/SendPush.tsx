@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, forwardRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import {
     Box,
     TextField,
@@ -177,8 +177,42 @@ export default function SendPush({ devices, defaultDevice, onAddDevice }: SendPu
     // 检测是否是窗口模式
     const isWindowMode = new URLSearchParams(window.location.search).get('mode') === 'window';
 
+    const [hasSendableWebPage, setHasSendableWebPage] = useState(false);
+
+    /*  监听 Tabs 变化，是否是可发送的网页链接
+        用于是否渲染 "发送此页面链接"
+        场景: 在 Panel 打开的情况下，切换页面时实时判断  */
+    useEffect(() => {
+        if (isWindowMode || !appSettings?.enablePageLinkButton) {
+            setHasSendableWebPage(false);
+            return;
+        }
+
+        const refresh = () => {
+            browser.tabs.query({ active: true, lastFocusedWindow: true })
+                .then(([tab]) => {
+                    const url = tab?.url;
+                    setHasSendableWebPage(!!url && (url.startsWith('http://') || url.startsWith('https://')));
+                })
+                .catch(() => setHasSendableWebPage(false));
+        };
+
+        const onUpdated = (_: number, info: { url?: string }, tab: Browser.tabs.Tab) => {
+            if (tab.active && info.url) refresh();
+        };
+
+        refresh();
+        browser.tabs.onActivated.addListener(refresh);
+        browser.tabs.onUpdated.addListener(onUpdated);
+
+        return () => {
+            browser.tabs.onActivated.removeListener(refresh);
+            browser.tabs.onUpdated.removeListener(onUpdated);
+        };
+    }, [isWindowMode, appSettings?.enablePageLinkButton]);
+
     // "发送此页面链接"按钮: 设置里开启才显示, 小窗模式下无当前页面可发故不显示
-    const showPageLinkButton = !isWindowMode && !!appSettings?.enablePageLinkButton;
+    const showPageLinkButton = !isWindowMode && !!appSettings?.enablePageLinkButton && hasSendableWebPage;
 
     // 监听来自background的快捷键消息
     useEffect(() => {
