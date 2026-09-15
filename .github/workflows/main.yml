@@ -45,19 +45,44 @@ jobs:
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 $(git rev-list --tags --skip=1 --max-count=1) 2>/dev/null || echo "")
 
           if [ -n "$PREVIOUS_TAG" ]; then
-            # 每行显示短SHA、提交信息和作者
-            COMMIT_LOG=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"- %h %s (%an)")
             echo "previous_tag=${PREVIOUS_TAG}" >> $GITHUB_OUTPUT
+            # 写入文件，避免 GITHUB_OUTPUT 多行变量在 Release body 里只显示第一行
+            git log "${PREVIOUS_TAG}"..HEAD --format="- %h %s (%an)" > release-commits.md
+            CONTRIBUTORS=$(git log "${PREVIOUS_TAG}"..HEAD --format="%an" | sort -u | awk '{printf "@%s  ", $0}' | sed 's/  $//')
           else
-            COMMIT_LOG=$(git log -n 5 --pretty=format:"- %h %s (%an)")
             echo "previous_tag=Initial Release" >> $GITHUB_OUTPUT
+            git log -n 5 --format="- %h %s (%an)" > release-commits.md
+            CONTRIBUTORS=$(git log -n 5 --format="%an" | sort -u | awk '{printf "@%s  ", $0}' | sed 's/  $//')
           fi
 
+          cat > release-body.md << EOF
+          ## 🍻 Bark Sender New Release | 新版发布
+
+          - **Firefox**: \`bark-sender-*-firefox.zip\`
+          - **Chrome**: \`bark-sender-*-chrome.zip\`
+          - **Edge**: \`bark-sender-*-edge.zip\`
+
+          ### 📖 Installation Guide | 安装说明
+          1. Download the appropriate extension zip | 下载对应浏览器的扩展包
+          2. Extract to a local folder | 解压缩到本地文件夹
+          3. Go to your browser's extension page, enable "Load unpacked" | 在浏览器扩展管理页面选择"加载已解压的扩展程序"
+          4. Select the extracted folder to install | 选择解压后的文件夹即可安装
+
+          ---
+
+          ### 📝 Changes Since ${PREVIOUS_TAG:-Initial Release} | 更新内容
+          EOF
+          cat release-commits.md >> release-body.md
           {
-            echo "commits<<EOF"
-            echo "$COMMIT_LOG"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+            echo ""
+            echo "${CONTRIBUTORS}"
+            echo ""
+            echo "---"
+            echo ""
+            echo "✅ **Build Info | 构建信息**"
+            echo "- Current Commit: $(git rev-parse --short HEAD)"
+            echo "- Build Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          } >> release-body.md
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -70,29 +95,7 @@ jobs:
             .output/*-edge.zip
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          body: |
-            ## 🍻 Bark Sender New Release | 新版发布
-
-            - **Firefox**: `bark-sender-*-firefox.zip`  
-            - **Chrome**: `bark-sender-*-chrome.zip`
-            - **Edge**: `bark-sender-*-edge.zip`
-
-            ### 📖 Installation Guide | 安装说明
-            1. Download the appropriate extension zip | 下载对应浏览器的扩展包  
-            2. Extract to a local folder | 解压缩到本地文件夹  
-            3. Go to your browser's extension page, enable "Load unpacked" | 在浏览器扩展管理页面选择"加载已解压的扩展程序"  
-            4. Select the extracted folder to install | 选择解压后的文件夹即可安装
-
-            ---
-
-            ### 📝 Changes Since ${{ steps.gitinfo.outputs.previous_tag }} | 更新内容
-            ${{ steps.gitinfo.outputs.commits }}
-
-            ---
-
-            ✅ **Build Info | 构建信息**
-            - Current Commit: ${{ steps.gitinfo.outputs.sha_short }}
-            - Build Time: ${{ steps.gitinfo.outputs.build_time }}
+          body_path: release-body.md
 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
